@@ -1,0 +1,22 @@
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">MS</span>
+    <div>
+      <strong>MS-ACM</strong>
+      <small>Access Control</small>
+    </div>
+  </div>
+  <nav class="main-nav">
+    <a href="/" class="<%= nav === 'dashboard' ? 'active' : '' %>">Dashboard</a>
+    <a href="/logs" class="<%= nav === 'logs' ? 'active' : '' %>">Log Attempt</a>
+    <a href="/users" class="<%= nav === 'users' ? 'active' : '' %>">User Management</a>
+    <a href="/users-system" class="<%= nav === 'users-system' ? 'active' : '' %>">User System</a>
+  </nav>
+  <div class="top-meta">
+    <span id="hw-status" class="status-pill <%= hardware.connected ? (hardware.busy ? 'busy' : 'ok') : 'off' %>">
+      <%= hardware.connected ? (hardware.busy ? 'Hardware sibuk' : 'Hardware online') : 'Hardware offline' %>
+    </span>
+    <span class="who"><%= currentUser.username %></span>
+    <button type="button" id="logout-btn" class="btn ghost">Keluar</button>
+  </div>
+</header>

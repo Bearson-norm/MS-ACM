@@ -1,0 +1,5 @@
+pyfingerprint==1.5
+gpiozero==2.0.1
+pyserial>=3.5
+websockets>=12.0
+python-dotenv>=1.0.0

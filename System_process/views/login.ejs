@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %> · MS-ACM</title>
+  <link rel="stylesheet" href="/public/css/style.css" />
+</head>
+<body>
+  <div class="login-shell">
+    <aside class="login-panel">
+      <div class="login-brand">
+        <span class="brand-mark">MS</span>
+        <div>
+          <strong>MS-ACM</strong>
+          <small>Access Control</small>
+        </div>
+      </div>
+      <p class="eyebrow">Magnetic Lock Access Control</p>
+      <h1>Verifikasi sidik jari<br />MS-ACM</h1>
+      <p class="lede">Masuk untuk memantau akses, meninjau log attempt, dan mengelola operator dari satu konsol.</p>
+      <ul class="login-features">
+        <li>
+          <span class="login-feature-label">Akses tunggal</span>
+          <span>Pantau verifikasi sidik jari dari sensor AS608 secara langsung.</span>
+        </li>
+        <li>
+          <span class="login-feature-label">Log attempt</span>
+          <span>Tinjau riwayat granted dan denied, lalu unduh laporan bila diperlukan.</span>
+        </li>
+        <li>
+          <span class="login-feature-label">User mesin</span>
+          <span>Enroll, nonaktifkan, atau hapus template sidik jari yang tersimpan di perangkat.</span>
+        </li>
+      </ul>
+      <p class="login-note">Verifikasi membuka magnetic lock hanya jika operator terdaftar dan aktif.</p>
+    </aside>
+    <main class="login-card">
+      <form id="login-form" class="stack">
+        <div class="login-form-head">
+          <h2>Masuk ke konsol</h2>
+          <p class="lede">Gunakan akun operator situs untuk membuka dashboard verifikasi.</p>
+        </div>
+        <label>
+          Username
+          <input type="text" name="username" autocomplete="username" required autofocus />
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" autocomplete="current-password" required />
+        </label>
+        <p id="login-error" class="form-error" hidden></p>
+        <button type="submit" class="btn primary">Masuk</button>
+        <p class="login-form-foot">Akses terbatas untuk operator yang terdaftar di User System.</p>
+      </form>
+    </main>
+  </div>
+  <script src="/public/js/login.js"></script>
+</body>
+</html>

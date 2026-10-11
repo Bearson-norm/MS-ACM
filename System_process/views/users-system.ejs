@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body class="app-body">
+  <%- include('partials/topbar') %>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Operator sistem</p>
+        <h1>User system management</h1>
+      </div>
+      <button type="button" id="add-sys-btn" class="btn primary">Tambah user</button>
+    </section>
+    <section class="card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Dibuat</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="sys-rows">
+          <tr><td colspan="3">Memuat…</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <dialog id="sys-dialog" class="modal">
+    <form id="sys-form" class="stack" method="dialog">
+      <h2>Tambah user sistem</h2>
+      <label>Username
+        <input type="text" name="username" required />
+      </label>
+      <label>Password
+        <input type="password" name="password" required minlength="6" />
+      </label>
+      <p id="sys-error" class="form-error" hidden></p>
+      <div class="row-actions">
+        <button type="submit" class="btn primary">Simpan</button>
+        <button type="button" class="btn ghost" id="sys-close-btn">Tutup</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="/public/js/common.js"></script>
+  <script src="/public/js/users-system.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body class="app-body">
+  <%- include('partials/topbar') %>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Ringkasan akses</p>
+        <h1>Dashboard verifikasi</h1>
+      </div>
+      <p id="dashboard-date" class="hero-date">—</p>
+    </section>
+    <section class="stat-grid">
+      <article class="stat-card granted">
+        <p>Berhasil diverifikasi</p>
+        <strong id="stat-granted">—</strong>
+        <small>Total seluruh waktu <span id="stat-granted-total">—</span></small>
+      </article>
+      <article class="stat-card denied">
+        <p>Tidak berhasil</p>
+        <strong id="stat-denied">—</strong>
+        <small>Total seluruh waktu <span id="stat-denied-total">—</span></small>
+      </article>
+    </section>
+    <section class="card">
+      <h2>Navigasi cepat</h2>
+      <div class="quick-links">
+        <a href="/logs" class="quick-link">Log Attempt</a>
+        <a href="/users" class="quick-link">User Management</a>
+        <a href="/users-system" class="quick-link">User System Management</a>
+      </div>
+    </section>
+  </main>
+  <script src="/public/js/common.js"></script>
+  <script src="/public/js/dashboard.js"></script>
+</body>
+</html>

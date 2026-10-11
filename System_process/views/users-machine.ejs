@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body class="app-body">
+  <%- include('partials/topbar') %>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Sidik jari mesin</p>
+        <h1>User management</h1>
+      </div>
+      <button type="button" id="add-user-btn" class="btn primary">Tambah user</button>
+    </section>
+    <section class="card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Fingerprint ID</th>
+            <th>Status</th>
+            <th>Dibuat</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="user-rows">
+          <tr><td colspan="5">Memuat…</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <dialog id="enroll-dialog" class="modal">
+    <form id="enroll-form" class="stack">
+      <h2>Daftarkan user mesin</h2>
+      <p class="hint">Letakkan jari pada sensor <strong>akses</strong> saat diminta. Password hash diisi otomatis dari hardware.</p>
+      <label>Username
+        <input type="text" name="username" required />
+      </label>
+      <label>Password (hash)
+        <input type="text" name="password" id="enroll-password" readonly placeholder="Menunggu enroll…" />
+      </label>
+      <p id="enroll-progress" class="progress-line">Siap mendaftar</p>
+      <p id="enroll-error" class="form-error" hidden></p>
+      <div class="row-actions">
+        <button type="submit" class="btn primary" id="enroll-start-btn">Mulai enroll</button>
+        <button type="button" class="btn ghost" id="enroll-close-btn">Tutup</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="/public/js/common.js"></script>
+  <script src="/public/js/users-machine.js"></script>
+</body>
+</html>

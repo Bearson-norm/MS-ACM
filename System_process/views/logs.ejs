@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body class="app-body">
+  <%- include('partials/topbar') %>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Riwayat transaksi</p>
+        <h1>Log attempt</h1>
+      </div>
+    </section>
+    <section class="card toolbar">
+      <form id="filter-form" class="filters">
+        <label>Dari
+          <input type="date" name="from" />
+        </label>
+        <label>Sampai
+          <input type="date" name="to" />
+        </label>
+        <label>Status
+          <select name="status">
+            <option value="">Semua</option>
+            <option value="granted">Granted</option>
+            <option value="denied">Denied</option>
+          </select>
+        </label>
+        <button type="submit" class="btn primary">Terapkan</button>
+      </form>
+      <div class="report-actions">
+        <button type="button" class="btn" data-export="csv">Unduh CSV</button>
+        <button type="button" class="btn" data-export="pdf">Unduh PDF</button>
+      </div>
+    </section>
+    <section class="card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Waktu</th>
+            <th>Username</th>
+            <th>Sensor</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="log-rows">
+          <tr><td colspan="4">Memuat…</td></tr>
+        </tbody>
+      </table>
+      <div class="pager">
+        <button type="button" id="prev-page" class="btn ghost">Sebelumnya</button>
+        <span id="page-info">Halaman 1</span>
+        <button type="button" id="next-page" class="btn ghost">Berikutnya</button>
+      </div>
+    </section>
+  </main>
+  <script src="/public/js/common.js"></script>
+  <script src="/public/js/logs.js"></script>
+</body>
+</html>
