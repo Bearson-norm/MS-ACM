@@ -44,6 +44,47 @@ npm start
 
 Dashboard tersedia di `http://localhost:3000`. Akun awal adalah `admin` / `admin123`. Ganti password akun, `SESSION_SECRET`, dan `HARDWARE_TOKEN` sebelum deployment. Nilai `HARDWARE_TOKEN` harus sama pada kedua proses.
 
+## Service dengan PM2 (Raspberry Pi)
+
+Pasang PM2 global (sekali):
+
+```bash
+sudo npm install -g pm2
+```
+
+Jalankan dari root repo (`MS-ACM`). Hentikan proses manual (`npm start` / `python src/main.py`) agar tidak bentrok dengan PID file.
+
+Hanya dashboard:
+
+```bash
+cd ~/deployment/MS-ACM
+pm2 start ecosystem.config.cjs --only ms-acm-system
+```
+
+Dashboard + hardware (venv Python harus sudah ada di `Hardware-control/.venv`):
+
+```bash
+pm2 start ecosystem.config.cjs
+```
+
+Agar hidup lagi setelah reboot:
+
+```bash
+pm2 save
+pm2 startup
+# jalankan perintah sudo yang dicetak PM2, lalu:
+pm2 save
+```
+
+Perintah berguna:
+
+```bash
+pm2 status
+pm2 logs ms-acm-system
+pm2 restart ms-acm-system
+pm2 stop ms-acm-system
+```
+
 ## Hardware-control
 
 ```bash
