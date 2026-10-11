@@ -64,8 +64,11 @@ pm2 start ecosystem.config.cjs --only ms-acm-system
 Dashboard + hardware (venv Python harus sudah ada di `Hardware-control/.venv`):
 
 ```bash
+test -x Hardware-control/.venv/bin/python || (cd Hardware-control && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt)
 pm2 start ecosystem.config.cjs
 ```
+
+`ecosystem.config.cjs` memakai path absolut ke `.venv/bin/python` (PM2 tidak menerima `./.venv/...` relatif).
 
 Agar hidup lagi setelah reboot:
 

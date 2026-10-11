@@ -1,10 +1,17 @@
+const path = require("path");
+
+const root = __dirname;
+const hardwareDir = path.join(root, "Hardware-control");
+const systemDir = path.join(root, "System_process");
+const hardwarePython = path.join(hardwareDir, ".venv", "bin", "python");
+
 /** @type {import('pm2').StartOptions} */
 module.exports = {
   apps: [
     {
       name: "ms-acm-system",
-      cwd: "./System_process",
-      script: "src/index.js",
+      cwd: systemDir,
+      script: path.join(systemDir, "src", "index.js"),
       instances: 1,
       exec_mode: "fork",
       autorestart: true,
@@ -17,9 +24,9 @@ module.exports = {
     },
     {
       name: "ms-acm-hardware",
-      cwd: "./Hardware-control",
-      script: "src/main.py",
-      interpreter: "./.venv/bin/python",
+      cwd: hardwareDir,
+      script: path.join(hardwareDir, "src", "main.py"),
+      interpreter: hardwarePython,
       instances: 1,
       exec_mode: "fork",
       autorestart: true,
