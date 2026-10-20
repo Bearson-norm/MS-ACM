@@ -101,7 +101,7 @@ python src/main.py
 
 Pada Raspberry Pi OS Bookworm, pasang backend GPIO yang sesuai bila belum tersedia, misalnya `rpi-lgpio`.
 
-Konfigurasi penting: `SENSOR_PORT=/dev/serial0`, `SENSOR_BAUD=57600`, `RELAY_PIN=17`, `RELAY_ACTIVE_HIGH=1`, dan `RELAY_DURATION_MS=3000`.
+Konfigurasi penting: `SENSOR_PORT=/dev/serial0`, `SENSOR_BAUD=57600`, `RELAY_PIN=17`, `RELAY_ACTIVE_HIGH=1`, dan `RELAY_DURATION_MS=3000`. Di Pi, pastikan `/dev/serial0` mengarah ke `ttyAMA0` (`enable_uart=1` dan `dtoverlay=disable-bt` atau `miniuart-bt`). Jika scan kadang macet tanpa restart manual, atur `SERIAL_READ_TIMEOUT_S`, `UART_IO_STUCK_S`, dan `UART_ERROR_FLUSH_THRESHOLD` di `Hardware-control/config.env` — hardware-control akan flush/reset UART otomatis.
 
 ## Mode simulasi
 

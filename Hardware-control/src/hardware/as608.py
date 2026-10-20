@@ -4,7 +4,10 @@ import hashlib
 import queue
 import threading
 import time
-from typing import Callable, Optional
+from contextlib import contextmanager
+from typing import Callable, Iterator, Optional
+
+import config
 
 try:
     from pyfingerprint.pyfingerprint import (
@@ -52,11 +55,100 @@ class As608Sensor(FingerprintSensor):
             raise FingerprintError("pyfingerprint tidak terpasang")
         self.name = name
         self.port = port
+        self.baud = baud
         self.io_lock = threading.RLock()
+        self._lock_since: Optional[float] = None
+        self._uart_error_streak = 0
+        self._watchdog_stop = threading.Event()
         self._f = PyFingerprint(port, baud, 0xFFFFFFFF, 0x00000000)
+        self._apply_serial_timeout()
         if not self._f.verifyPassword():
             raise FingerprintError(f"Password sensor {name} tidak valid")
+        self._watchdog = threading.Thread(
+            target=self._uart_watchdog_loop,
+            name=f"uart-watchdog-{name}",
+            daemon=True,
+        )
+        self._watchdog.start()
         print(f"[{name}] sensor ready on {port} @ {baud}", flush=True)
+
+    def close(self) -> None:
+        self._watchdog_stop.set()
+
+    def _serial(self):
+        return object.__getattribute__(self._f, "_PyFingerprint__serial")
+
+    def _apply_serial_timeout(self) -> None:
+        try:
+            ser = self._serial()
+            ser.timeout = config.SERIAL_READ_TIMEOUT_S
+            ser.write_timeout = max(config.SERIAL_READ_TIMEOUT_S, 1.0)
+        except Exception:
+            pass
+
+    def _flush_uart_buffers(self) -> None:
+        try:
+            ser = self._serial()
+            ser.reset_input_buffer()
+            ser.reset_output_buffer()
+        except Exception:
+            pass
+
+    def _reset_serial_link(self) -> None:
+        try:
+            ser = self._serial()
+            try:
+                ser.reset_input_buffer()
+                ser.reset_output_buffer()
+            except Exception:
+                pass
+            if ser.is_open:
+                ser.close()
+            ser.open()
+            self._apply_serial_timeout()
+            if not self._f.verifyPassword():
+                print(f"[{self.name}] verifyPassword gagal setelah reset UART", flush=True)
+            else:
+                print(f"[{self.name}] UART direset (link pulih)", flush=True)
+            self._uart_error_streak = 0
+        except Exception as exc:
+            print(f"[{self.name}] reset UART gagal: {exc}", flush=True)
+
+    def _note_uart_error(self, exc: Exception) -> None:
+        self._uart_error_streak += 1
+        if self._uart_error_streak >= config.UART_ERROR_FLUSH_THRESHOLD:
+            self._flush_uart_buffers()
+            self._uart_error_streak = 0
+
+    def _uart_watchdog_loop(self) -> None:
+        while not self._watchdog_stop.wait(2.0):
+            since = self._lock_since
+            if since is None:
+                continue
+            if time.monotonic() - since < config.UART_IO_STUCK_S:
+                continue
+            print(
+                f"[{self.name}] UART macet >{config.UART_IO_STUCK_S:.0f}s, memaksa reset serial",
+                flush=True,
+            )
+            if self.io_lock.acquire(blocking=False):
+                try:
+                    self._reset_serial_link()
+                finally:
+                    self._lock_since = None
+                    self.io_lock.release()
+            else:
+                self._reset_serial_link()
+
+    @contextmanager
+    def _io_session(self) -> Iterator[None]:
+        self.io_lock.acquire()
+        self._lock_since = time.monotonic()
+        try:
+            yield
+        finally:
+            self._lock_since = None
+            self.io_lock.release()
 
     def _wait_image(self, should_stop: StopFn, timeout_s: float) -> bool:
         if timeout_s > 2:
@@ -68,8 +160,10 @@ class As608Sensor(FingerprintSensor):
                 return False
             try:
                 if self._f.readImage():
+                    self._uart_error_streak = 0
                     return True
             except Exception as exc:
+                self._note_uart_error(exc)
                 now = time.monotonic()
                 if now - last_err > 2:
                     print(f"[{self.name}] readImage error: {exc}", flush=True)
@@ -87,16 +181,23 @@ class As608Sensor(FingerprintSensor):
                 if not self._f.readImage():
                     return
             except Exception:
+                self._flush_uart_buffers()
                 return
             time.sleep(0.1)
 
     def search(self, should_stop: StopFn) -> int:
-        with self.io_lock:
+        with self._io_session():
             if not self._wait_image(should_stop, timeout_s=0.8):
                 return -2  # no finger / paused
-            self._f.convertImage(FINGERPRINT_CHARBUFFER1)
-            position, _accuracy = self._f.searchTemplate()
-            return int(position)
+            try:
+                self._f.convertImage(FINGERPRINT_CHARBUFFER1)
+                position, _accuracy = self._f.searchTemplate()
+                self._uart_error_streak = 0
+                return int(position)
+            except Exception as exc:
+                self._note_uart_error(exc)
+                self._flush_uart_buffers()
+                raise
 
     def _next_free(self) -> int:
         for page in range(0, 4):
@@ -107,7 +208,7 @@ class As608Sensor(FingerprintSensor):
         raise FingerprintError("Kapasitas sensor penuh")
 
     def enroll(self, should_stop: StopFn, progress: ProgressCb) -> tuple[int, str]:
-        with self.io_lock:
+        with self._io_session():
             progress("place_finger")
             if not self._wait_image(should_stop, 45):
                 if should_stop():
@@ -134,22 +235,25 @@ class As608Sensor(FingerprintSensor):
             self._f.createTemplate()
             position = self._next_free()
             self._f.storeTemplate(position, FINGERPRINT_CHARBUFFER1)
-            template = self.load_template_bytes(position)
+            template = self._load_template_bytes_unlocked(position)
             password_hash = hashlib.sha256(bytes(template)).hexdigest()
             return position, password_hash
 
+    def _load_template_bytes_unlocked(self, position: int) -> list[int]:
+        self._f.loadTemplate(position, FINGERPRINT_CHARBUFFER1)
+        return list(self._f.downloadCharacteristics(FINGERPRINT_CHARBUFFER1))
+
     def load_template_bytes(self, position: int) -> list[int]:
-        with self.io_lock:
-            self._f.loadTemplate(position, FINGERPRINT_CHARBUFFER1)
-            return list(self._f.downloadCharacteristics(FINGERPRINT_CHARBUFFER1))
+        with self._io_session():
+            return self._load_template_bytes_unlocked(position)
 
     def store_template_bytes(self, position: int, template: list[int]) -> None:
-        with self.io_lock:
+        with self._io_session():
             self._f.uploadCharacteristics(FINGERPRINT_CHARBUFFER1, template)
             self._f.storeTemplate(position, FINGERPRINT_CHARBUFFER1)
 
     def delete(self, position: int) -> None:
-        with self.io_lock:
+        with self._io_session():
             self._f.deleteTemplate(position)
 
 

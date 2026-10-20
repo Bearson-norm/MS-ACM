@@ -152,7 +152,8 @@ class HardwareGateway extends EventEmitter {
   }
 
   enroll(username) {
-    return this.requestExclusive("enroll_start", { username }, 90000);
+    // Hardware enroll: up to 45s + 15s + 45s finger waits (see as608.py) plus store.
+    return this.requestExclusive("enroll_start", { username }, 180000);
   }
 
   deleteFingerprint(fingerprintId) {

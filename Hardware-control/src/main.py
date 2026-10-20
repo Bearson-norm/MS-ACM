@@ -69,6 +69,7 @@ def main() -> None:
             time.sleep(0.3)
     finally:
         state.shutdown.set()
+        sensor.close()
         relay.close()
         print("Hardware-control stopped")
 
