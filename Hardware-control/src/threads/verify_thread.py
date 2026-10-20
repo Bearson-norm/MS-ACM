@@ -36,6 +36,10 @@ class VerifyThread(threading.Thread):
             self._handle_match(position)
 
     def _handle_match(self, fingerprint_id: int) -> None:
+        print(
+            f"[{self.sensor_name}] finger scan ok fingerprint_id={fingerprint_id}",
+            flush=True,
+        )
         request_id = str(uuid.uuid4())
         waiter = self.state.register_decision(request_id)
         self.state.send(
@@ -51,5 +55,19 @@ class VerifyThread(threading.Thread):
         )
         waiter.wait(timeout=2.0)
         decision = self.state.take_decision(request_id) or {}
-        if decision.get("status") == "granted":
-            self.relay.pulse(self.state.get_relay_duration())
+        if not decision:
+            print(
+                f"[{self.sensor_name}] verify timeout (no decision) fingerprint_id={fingerprint_id}",
+                flush=True,
+            )
+            return
+        status = decision.get("status", "denied")
+        username = decision.get("username") or "-"
+        print(
+            f"[{self.sensor_name}] verify {status} fingerprint_id={fingerprint_id} user={username}",
+            flush=True,
+        )
+        if status == "granted":
+            duration_ms = self.state.get_relay_duration()
+            self.relay.pulse(duration_ms)
+            print(f"[{self.sensor_name}] relay pulse {duration_ms}ms", flush=True)
