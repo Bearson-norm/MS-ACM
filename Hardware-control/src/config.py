@@ -26,4 +26,10 @@ PID_FILE = _pid if os.path.isabs(_pid) else str(ROOT / _pid)
 SIMULATE = _bool("SIMULATE", "0")
 SERIAL_READ_TIMEOUT_S = float(os.getenv("SERIAL_READ_TIMEOUT_S", "0.3"))
 UART_IO_STUCK_S = float(os.getenv("UART_IO_STUCK_S", "10"))
-UART_ERROR_FLUSH_THRESHOLD = int(os.getenv("UART_ERROR_FLUSH_THRESHOLD", "8"))
+# Flush RX buffer on every N protocol errors (1 = setiap error).
+UART_ERROR_FLUSH_THRESHOLD = int(os.getenv("UART_ERROR_FLUSH_THRESHOLD", "1"))
+# Setelah sekian error berturut-turut, verifyPassword + reset port penuh.
+UART_ERROR_RESET_THRESHOLD = int(os.getenv("UART_ERROR_RESET_THRESHOLD", "12"))
+UART_RESYNC_EVERY = int(os.getenv("UART_RESYNC_EVERY", "4"))
+VERIFY_POLL_INTERVAL_S = float(os.getenv("VERIFY_POLL_INTERVAL_S", "0.25"))
+VERIFY_IMAGE_TIMEOUT_S = float(os.getenv("VERIFY_IMAGE_TIMEOUT_S", "0.5"))

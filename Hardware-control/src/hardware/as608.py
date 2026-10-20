@@ -118,7 +118,18 @@ class As608Sensor(FingerprintSensor):
         self._uart_error_streak += 1
         if self._uart_error_streak >= config.UART_ERROR_FLUSH_THRESHOLD:
             self._flush_uart_buffers()
-            self._uart_error_streak = 0
+            time.sleep(0.02)
+        if self._uart_error_streak % config.UART_RESYNC_EVERY == 0:
+            try:
+                self._f.verifyPassword()
+            except Exception:
+                pass
+        if self._uart_error_streak >= config.UART_ERROR_RESET_THRESHOLD:
+            print(
+                f"[{self.name}] {self._uart_error_streak} error UART berturut, reset port",
+                flush=True,
+            )
+            self._reset_serial_link()
 
     def _uart_watchdog_loop(self) -> None:
         while not self._watchdog_stop.wait(2.0):
@@ -155,6 +166,8 @@ class As608Sensor(FingerprintSensor):
             print(f"[{self.name}] waiting for finger ({timeout_s:.0f}s)…", flush=True)
         deadline = time.monotonic() + timeout_s
         last_err = 0.0
+        quick_poll = timeout_s <= 1.0
+        poll_gap = 0.12 if quick_poll else 0.05
         while time.monotonic() < deadline:
             if should_stop():
                 return False
@@ -162,14 +175,17 @@ class As608Sensor(FingerprintSensor):
                 if self._f.readImage():
                     self._uart_error_streak = 0
                     return True
+                if quick_poll:
+                    self._uart_error_streak = max(0, self._uart_error_streak - 1)
             except Exception as exc:
                 self._note_uart_error(exc)
                 now = time.monotonic()
-                if now - last_err > 2:
+                if now - last_err > 10:
                     print(f"[{self.name}] readImage error: {exc}", flush=True)
                     last_err = now
-                time.sleep(0.05)
-            time.sleep(0.05)
+                time.sleep(poll_gap)
+                continue
+            time.sleep(poll_gap)
         return False
 
     def _wait_remove(self, should_stop: StopFn, timeout_s: float = 15) -> None:
@@ -187,7 +203,7 @@ class As608Sensor(FingerprintSensor):
 
     def search(self, should_stop: StopFn) -> int:
         with self._io_session():
-            if not self._wait_image(should_stop, timeout_s=0.8):
+            if not self._wait_image(should_stop, timeout_s=config.VERIFY_IMAGE_TIMEOUT_S):
                 return -2  # no finger / paused
             try:
                 self._f.convertImage(FINGERPRINT_CHARBUFFER1)

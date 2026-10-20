@@ -4,6 +4,7 @@ import threading
 import time
 import uuid
 
+import config
 from hardware.as608 import FingerprintSensor
 from hardware.relay import Relay
 from sync.state import SharedState
@@ -30,6 +31,7 @@ class VerifyThread(threading.Thread):
                 print(f"[{self.name}] search error: {exc}", flush=True)
                 continue
             if position == -2:
+                time.sleep(config.VERIFY_POLL_INTERVAL_S)
                 continue
             self._handle_match(position)
 
