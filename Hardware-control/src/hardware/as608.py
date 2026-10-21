@@ -48,6 +48,9 @@ class FingerprintSensor:
     def close(self) -> None:
         return None
 
+    def after_verify_cycle(self, cooldown_s: float) -> None:
+        return None
+
 
 class As608Sensor(FingerprintSensor):
     def __init__(self, port: str, baud: int, name: str) -> None:
@@ -60,6 +63,8 @@ class As608Sensor(FingerprintSensor):
         self._reset_lock = threading.Lock()
         self._uart_op_started: Optional[float] = None
         self._uart_error_streak = 0
+        self._quiet_until = 0.0
+        self._last_readimage_log_at = 0.0
         self._watchdog_stop = threading.Event()
         self._f = PyFingerprint(port, baud, 0xFFFFFFFF, 0x00000000)
         self._apply_serial_timeout()
@@ -75,6 +80,22 @@ class As608Sensor(FingerprintSensor):
 
     def close(self) -> None:
         self._watchdog_stop.set()
+
+    def after_verify_cycle(self, cooldown_s: float) -> None:
+        self._quiet_until = time.monotonic() + max(cooldown_s, 0.0)
+        with self._io_session():
+            self._flush_uart_buffers()
+            self._uart_error_streak = 0
+
+    def _maybe_log_readimage_error(self, exc: Exception, last_err: float) -> float:
+        now = time.monotonic()
+        if now < self._quiet_until:
+            return last_err
+        if now - self._last_readimage_log_at < config.UART_READIMAGE_LOG_INTERVAL_S:
+            return last_err
+        print(f"[{self.name}] readImage error: {exc}", flush=True)
+        self._last_readimage_log_at = now
+        return now
 
     def _serial(self):
         return object.__getattribute__(self._f, "_PyFingerprint__serial")
@@ -194,10 +215,7 @@ class As608Sensor(FingerprintSensor):
                     self._uart_error_streak = max(0, self._uart_error_streak - 1)
             except Exception as exc:
                 self._note_uart_error(exc)
-                now = time.monotonic()
-                if now - last_err > 10:
-                    print(f"[{self.name}] readImage error: {exc}", flush=True)
-                    last_err = now
+                last_err = self._maybe_log_readimage_error(exc, last_err)
                 time.sleep(poll_gap)
                 continue
             time.sleep(poll_gap)

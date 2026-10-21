@@ -33,3 +33,6 @@ UART_ERROR_RESET_THRESHOLD = int(os.getenv("UART_ERROR_RESET_THRESHOLD", "12"))
 UART_RESYNC_EVERY = int(os.getenv("UART_RESYNC_EVERY", "4"))
 VERIFY_POLL_INTERVAL_S = float(os.getenv("VERIFY_POLL_INTERVAL_S", "0.25"))
 VERIFY_IMAGE_TIMEOUT_S = float(os.getenv("VERIFY_IMAGE_TIMEOUT_S", "0.5"))
+# Setelah scan: jeda polling + kurangi log UART (relay/finger masih di sensor).
+POST_SCAN_AFTER_RELAY_S = float(os.getenv("POST_SCAN_AFTER_RELAY_S", "1.0"))
+UART_READIMAGE_LOG_INTERVAL_S = float(os.getenv("UART_READIMAGE_LOG_INTERVAL_S", "30"))

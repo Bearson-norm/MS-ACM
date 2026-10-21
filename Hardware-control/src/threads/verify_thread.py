@@ -60,6 +60,7 @@ class VerifyThread(threading.Thread):
                 f"[{self.sensor_name}] verify timeout (no decision) fingerprint_id={fingerprint_id}",
                 flush=True,
             )
+            self._post_scan_cooldown(config.POST_SCAN_AFTER_RELAY_S)
             return
         status = decision.get("status", "denied")
         username = decision.get("username") or "-"
@@ -67,7 +68,15 @@ class VerifyThread(threading.Thread):
             f"[{self.sensor_name}] verify {status} fingerprint_id={fingerprint_id} user={username}",
             flush=True,
         )
+        duration_ms = self.state.get_relay_duration()
         if status == "granted":
-            duration_ms = self.state.get_relay_duration()
             self.relay.pulse(duration_ms)
             print(f"[{self.sensor_name}] relay pulse {duration_ms}ms", flush=True)
+            cooldown_s = (duration_ms / 1000.0) + config.POST_SCAN_AFTER_RELAY_S
+        else:
+            cooldown_s = config.POST_SCAN_AFTER_RELAY_S
+        self._post_scan_cooldown(cooldown_s)
+
+    def _post_scan_cooldown(self, cooldown_s: float) -> None:
+        self.sensor.after_verify_cycle(cooldown_s)
+        time.sleep(cooldown_s)
