@@ -57,7 +57,8 @@ class As608Sensor(FingerprintSensor):
         self.port = port
         self.baud = baud
         self.io_lock = threading.RLock()
-        self._lock_since: Optional[float] = None
+        self._reset_lock = threading.Lock()
+        self._uart_op_started: Optional[float] = None
         self._uart_error_streak = 0
         self._watchdog_stop = threading.Event()
         self._f = PyFingerprint(port, baud, 0xFFFFFFFF, 0x00000000)
@@ -95,16 +96,22 @@ class As608Sensor(FingerprintSensor):
             pass
 
     def _reset_serial_link(self) -> None:
+        if not self._reset_lock.acquire(blocking=False):
+            return
         try:
-            ser = self._serial()
             try:
-                ser.reset_input_buffer()
-                ser.reset_output_buffer()
+                ser = self._serial()
+                try:
+                    ser.reset_input_buffer()
+                    ser.reset_output_buffer()
+                except Exception:
+                    pass
+                if ser.is_open:
+                    ser.close()
             except Exception:
                 pass
-            if ser.is_open:
-                ser.close()
-            ser.open()
+            time.sleep(0.05)
+            self._f = PyFingerprint(self.port, self.baud, 0xFFFFFFFF, 0x00000000)
             self._apply_serial_timeout()
             if not self._f.verifyPassword():
                 print(f"[{self.name}] verifyPassword gagal setelah reset UART", flush=True)
@@ -113,6 +120,16 @@ class As608Sensor(FingerprintSensor):
             self._uart_error_streak = 0
         except Exception as exc:
             print(f"[{self.name}] reset UART gagal: {exc}", flush=True)
+        finally:
+            self._uart_op_started = None
+            self._reset_lock.release()
+
+    def _uart_read_image(self) -> bool:
+        self._uart_op_started = time.monotonic()
+        try:
+            return bool(self._f.readImage())
+        finally:
+            self._uart_op_started = None
 
     def _note_uart_error(self, exc: Exception) -> None:
         self._uart_error_streak += 1
@@ -126,39 +143,37 @@ class As608Sensor(FingerprintSensor):
                 pass
         if self._uart_error_streak >= config.UART_ERROR_RESET_THRESHOLD:
             print(
-                f"[{self.name}] {self._uart_error_streak} error UART berturut, reset port",
+                f"[{self.name}] {self._uart_error_streak} error UART berturut, flush buffer",
                 flush=True,
             )
-            self._reset_serial_link()
+            self._flush_uart_buffers()
+            self._uart_error_streak = 0
 
     def _uart_watchdog_loop(self) -> None:
         while not self._watchdog_stop.wait(2.0):
-            since = self._lock_since
-            if since is None:
+            op_started = self._uart_op_started
+            if op_started is None:
                 continue
-            if time.monotonic() - since < config.UART_IO_STUCK_S:
+            if time.monotonic() - op_started < config.UART_IO_STUCK_S:
                 continue
-            print(
-                f"[{self.name}] UART macet >{config.UART_IO_STUCK_S:.0f}s, memaksa reset serial",
-                flush=True,
-            )
-            if self.io_lock.acquire(blocking=False):
-                try:
-                    self._reset_serial_link()
-                finally:
-                    self._lock_since = None
-                    self.io_lock.release()
-            else:
+            # Jangan reset port saat thread lain (enroll/verify) memegang io_lock.
+            if not self.io_lock.acquire(blocking=False):
+                continue
+            try:
+                print(
+                    f"[{self.name}] readImage macet >{config.UART_IO_STUCK_S:.0f}s, reset serial",
+                    flush=True,
+                )
                 self._reset_serial_link()
+            finally:
+                self.io_lock.release()
 
     @contextmanager
     def _io_session(self) -> Iterator[None]:
         self.io_lock.acquire()
-        self._lock_since = time.monotonic()
         try:
             yield
         finally:
-            self._lock_since = None
             self.io_lock.release()
 
     def _wait_image(self, should_stop: StopFn, timeout_s: float) -> bool:
@@ -172,7 +187,7 @@ class As608Sensor(FingerprintSensor):
             if should_stop():
                 return False
             try:
-                if self._f.readImage():
+                if self._uart_read_image():
                     self._uart_error_streak = 0
                     return True
                 if quick_poll:
@@ -194,7 +209,7 @@ class As608Sensor(FingerprintSensor):
             if should_stop():
                 return
             try:
-                if not self._f.readImage():
+                if not self._uart_read_image():
                     return
             except Exception:
                 self._flush_uart_buffers()
